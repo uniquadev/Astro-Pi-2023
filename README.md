@@ -6,9 +6,9 @@ PizzaDev's project submission for Astro-Pi Mission Space Lab 2023
 **Theme**: Life on Earth  
 **Title of the experiment**: Desertification and overexploitation  
 **Team members**:
-> - Cipolletti Lorenzo @uniquadev  
+> - Cipolletti Lorenzo [@uniquadev](https://github.com/uniquadev/)  
 > - Presta Alessandro  
-> - Romeo Diego @DiegoRomeo  
+> - Romeo Diego [@DiegoRomeo](https://github.com/DiegoRomeo)  
 >
 > **Mentor**: Grimaldi Annarita  
 

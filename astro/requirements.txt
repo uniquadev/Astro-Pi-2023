@@ -1,3 +1,5 @@
 logzero
 exif
+skyfield
+orbit
 picamera

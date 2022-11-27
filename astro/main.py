@@ -8,8 +8,8 @@ from logzero import logger, logfile # Debug purposes
 from time import sleep # Sleep
 import exif # Embed GPS data into any images
 from os import fsync # Flush data to disk
-from orbit import ISS, ephemeris # Check light conditions
-from skyfield.api import load # Load ephemris & timescale data
+from orbit import ISS, ephemeris # Load the JPL ephemeris DE421 (covers 1900-2050).
+from skyfield.api import load # Load timescale data
 import numpy as np # Array manipulation
 import cv2 # Image processing
 
@@ -41,7 +41,6 @@ base_folder = Path(__file__).parent.resolve()
 out_folder = base_folder / "out"
 out_folder.mkdir(parents=True, exist_ok=True)
 
-# Load the JPL ephemeris DE421 (covers 1900-2050).
 timescale = load.timescale()
 
 # Set log file

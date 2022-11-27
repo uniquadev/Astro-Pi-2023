@@ -8,7 +8,7 @@ from logzero import logger, logfile # Debug purposes
 from time import sleep # Sleep
 import exif # Embed GPS data into any images
 from os import fsync # Flush data to disk
-from orbit import ISS # Check light conditions
+from orbit import ISS, ephemeris # Check light conditions
 from skyfield.api import load # Load ephemris & timescale data
 import numpy as np # Array manipulation
 import cv2 # Image processing
@@ -42,7 +42,6 @@ out_folder = base_folder / "out"
 out_folder.mkdir(parents=True, exist_ok=True)
 
 # Load the JPL ephemeris DE421 (covers 1900-2050).
-ephemeris = load("de421.bsp")
 timescale = load.timescale()
 
 # Set log file
@@ -70,6 +69,7 @@ def light_level() -> bool:
 
 
 def convert_cords(angle):
+
     """
     Convert a `skyfield` Angle to an EXIF-appropriate
     representation (positive rationals)
@@ -78,8 +78,10 @@ def convert_cords(angle):
     Return a tuple containing a boolean and the converted angle,
     with the boolean indicating if the angle is negative.
     """
+
     sign, degrees, minutes, seconds = angle.signed_dms()
     exif_angle = f'{degrees:.0f}/1,{minutes:.0f}/1,{seconds*10:.0f}/10'
+    
     return sign < 0, exif_angle
 
 def add_metadata(lat, latr, long, longr):

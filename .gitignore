@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+de421.bsp
 
 # Ignore out folder
 out/

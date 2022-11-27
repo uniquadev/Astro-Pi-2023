@@ -148,48 +148,50 @@ def is_useful(path:Path) -> bool:
 # ENTRY
 # --------------------------------------
 
-logger.info('started')
-# run untile the program has been running for the specified RUN_TIME
-while now_time - start_time < RUN_TIME:
+if __name__ == "__main__":
 
-  now_time = datetime.now() # Update current time
-  
-  # Check storage limit, to don't surpass 3 GB in bytes
-  if astro_memory >= 2.7e9:
-    logger.error(f'Storage limit reached with {image_counter} images')
-    break
+  logger.info('started')
+  # run untile the program has been running for the specified RUN_TIME
+  while now_time - start_time < RUN_TIME:
 
-  # Ensure errors don't break anything
-  try:
-    # Check if the light level is sufficient
-    if light_level() == False:
-      sleep(2)
-      continue
+    now_time = datetime.now() # Update current time
+    
+    # Check storage limit, to don't surpass 3 GB in bytes
+    if astro_memory >= 2.7e9:
+      logger.error(f'Storage limit reached with {image_counter} images')
+      break
 
-    # Take picture
-    path : Path = take_image()
+    # Ensure errors don't break anything
+    try:
+      # Check if the light level is sufficient
+      if light_level() == False:
+        sleep(2)
+        continue
 
-    if is_useful(path) == False:
-      # Sleep a short time to avoid taking pictures too slowly
-      # Don't increment image counter as the image will be overwritten
-      sleep(0.8)
-      continue
+      # Take picture
+      path : Path = take_image()
 
-    image_counter += 1
-    astro_memory += path.stat().st_size
+      if is_useful(path) == False:
+        # Sleep a short time to avoid taking pictures too slowly
+        # Don't increment image counter as the image will be overwritten
+        sleep(0.8)
+        continue
 
-  except Exception as e:
-    logger.exception(e)
-    sleep(1) # Recover time
-    image_counter += 2 # make error obvious
+      image_counter += 1
+      astro_memory += path.stat().st_size
 
-"""
-  ____  _                ____             
- |  _ \(_)__________ _  |  _ \  _____   __
- | |_) | |_  /_  / _` | | | | |/ _ \ \ / /
- |  __/| |/ / / / (_| | | |_| |  __/\ V / 
- |_|   |_/___/___\__,_| |____/ \___| \_/  
+    except Exception as e:
+      logger.exception(e)
+      sleep(1) # Recover time
+      image_counter += 2 # make error obvious
 
-"""
-logger.info(f'execution completed with {image_counter} images (づ ᴗ _ᴗ)づ')
-camera.close()
+  """
+    ____  _                ____             
+  |  _ \(_)__________ _  |  _ \  _____   __
+  | |_) | |_  /_  / _` | | | | |/ _ \ \ / /
+  |  __/| |/ / / / (_| | | |_| |  __/\ V / 
+  |_|   |_/___/___\__,_| |____/ \___| \_/  
+
+  """
+  logger.info(f'execution completed with {image_counter} images (づ ᴗ _ᴗ)づ')
+  camera.close()

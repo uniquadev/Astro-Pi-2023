@@ -1,3 +1,13 @@
+"""Main file
+
+This script will run aboard the ISS taking pictures of the Earth surface if there is enough light.
+Every time a photo is taken, the script will automatically determine the average NIR (Near InfraRed) value of the image to decide whether to discard or keep it depending if it is over water or clouds.
+In the first case the image will be eventually overwritten by a new image while in the second case the program will proceed normally.
+The program will also save for each image the ISS location at the time it was taken, and the time itself as metadata.
+
+The script will automatically stop before the 3 hours of maximum allowed runtime have passed.
+"""
+
 # --------------------------------------
 # IMPORTS
 # --------------------------------------
@@ -55,8 +65,11 @@ camera.resolution = (4056,3040)
 # --------------------------------------
 
 def light_level() -> bool:
-  
-  """Check if the light level is sufficient for the camera to take a picture"""
+  """
+  Check if the light level is sufficient for the camera to take a picture
+
+  Return a boolean value indicating if the light level is sufficient or not.
+  """
 
   curr = timescale.now()
     
@@ -67,8 +80,7 @@ def light_level() -> bool:
       return False
 
 
-def convert_cords(angle):
-
+def convert_cords(angle) -> tuple[bool, str]:
     """
     Convert a `skyfield` Angle to an EXIF-appropriate
     representation (positive rationals)
@@ -83,39 +95,60 @@ def convert_cords(angle):
     
     return sign < 0, exif_angle
 
-def add_metadata(lat, latr, long, longr):
-    
+def convert_time(time: datetime) -> str:
+    """
+    Convert a `datetime` object to an EXIF-appropriate representation (string)
+    e.g. 2022-11-27 14:27:51.098019 to 2022:11:27 14:27:51
+
+    Return a string containing the converted date/time.
+    """
+
+    return time.strftime("%Y:%m:%d %H:%M:%S")
+
+def add_metadata(lat, latr, long, longr, t) -> None:
     """ Add the metadata tags to the camera
         so that we know the location and can identify the
-        area on a map when we analyse the images on Earth
+        area on a map when we analyse the images on Earth.
+
+        Time will also be saved for further analysis in Phase 4.
     """
     
     global camera
     
+    # Location
     camera.exif_tags["GPS.GPSLatitude"] = lat
     camera.exif_tags["GPS.GPSLatitudeRef"] = latr
     camera.exif_tags["GPS.GPSLongitude"] = long
     camera.exif_tags["GPS.GPSLongitudeRef"] = longr
 
+    # Time
+    camera.exif_tags["DateTimeOriginal"] = t
+
 
 def take_image() -> Path:
-    
-    """Take a picture and return the path to the image"""
+    """Take a picture, write metadata and return the path to the image"""
   
     global image_counter
+    global now_time
   
     # Define output file
     out_file = out_folder / f"img_{image_counter:04d}.jpg"
 
-    # Get location and add it to the image
+    # Get location
     location = ISS.coordinates()
     south, exif_lat = convert_cords(location.latitude)
     west, exif_long = convert_cords(location.longitude)
+    
+    # Get time
+    t = convert_time(now_time)
+
+    # Add location and time 
     add_metadata(
       exif_lat,
       "S" if south else "N",
       exif_long,
-      "W" if west else "E"
+      "W" if west else "E",
+      t
     )
 
     # Take image
@@ -127,12 +160,15 @@ def take_image() -> Path:
     return out_file
 
 def is_useful(path:Path) -> bool:
-
   """ Checks to see if the image is over water/clouds
       so that we can delete it to save storage and processing
       because an image largely over water is useless for the task.
       The function takes the average light/darkness value and compares
       it to a known threshold to determine if the image is over water/clouds.
+
+      Return a boolean value indicating if the image is useful or not.
+
+      Original source coude at:
       https://github.com/SourishS17/Astro-Pi-2022/blob/db90b7ab1319c276c73f5d70addf7bae4b931a08/main.py#L100
   """
     

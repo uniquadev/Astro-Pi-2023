@@ -1,11 +1,24 @@
-"""Main file
+"""MAIN FILE
 
-This script will run aboard the ISS taking pictures of the Earth surface if there is enough light.
-Every time a photo is taken, the script will automatically determine the average NIR (Near InfraRed) value of the image to decide whether to discard or keep it depending if it is over water or clouds.
-In the first case the image will be eventually overwritten by a new image while in the second case the program will proceed normally.
-The program will also save for each image the ISS location at the time it was taken, and the time itself as metadata.
+GENERAL DESCRIPTION
+    This script will run aboard the ISS taking pictures of the Earth surface depending if there is enough light or free storage.
+    Every time a photo is taken, the script will automatically determine the average NIR (near infrared) value of the image to decide whether it is useful our primary or alternative goal (backup plan).
+    According to this distinction we decided to save images in 2 different folders named 'primary' and 'alternative').
+    The program will also save for each image the ISS location at the time it was taken, and the time itself as metadata.
+    The script will automatically stop its execution if the maximum allowed runtime is exceeded.
 
-The script will automatically stop before the 3 hours of maximum allowed runtime have passed.
+EXCEPTION HANDLING
+    Exceptions and errors are handled by using a try-except statement and logged to the log file.
+
+TIME MANAGEMENT
+    The script will automatically stop before the 3 hours of maximum allowed runtime have passed.
+    This is accomplished through the datetime library.
+    The maximum allowed runtime is set to 177 minutes, 3 minutes less than 180, to ensure that the requirement is satisfied in case of any delay.
+
+STORAGE MANAGEMENT
+    If the maximum storage limit of 3GB is exceeded the program will no longer save data.
+    To ensure this the 'astro_memory' variable (representing the storage already used) is initialized with a value of 30e6 (the estimated final size of the log file)
+    and updated every time a photo is taken.
 """
 
 # --------------------------------------
@@ -47,9 +60,19 @@ now_time = datetime.now()
 
 # Resolve absolute path to the current code directory
 base_folder = Path(__file__).parent.resolve()
-# Define output folder
-out_folder = base_folder / "out"
-out_folder.mkdir(parents=True, exist_ok=True)
+
+# Define output folders
+# The folder named 'temp' is where all the images are saved before cloud/water analysis
+# The folder named 'primary' is for all the images useful to accomplish our primary goal
+# The folder named 'alternative' is for all the images useful to accomplish our alternative goal
+temp_folder = base_folder / "temp"
+temp_folder.mkdir(parents=True, exist_ok=True)
+
+primary_folder = base_folder / "primary"
+primary_folder.mkdir(parents=True, exist_ok=True)
+
+alternative_folder = base_folder / "alternative"
+alternative_folder.mkdir(parents=True, exist_ok=True)
 
 timescale = load.timescale()
 
@@ -65,24 +88,21 @@ camera.resolution = (4056,3040)
 # --------------------------------------
 
 def light_level() -> bool:
-  """
-  Check if the light level is sufficient for the camera to take a picture
+    """ Check if the light level is sufficient for the camera to take a picture.
 
-  Return a boolean value indicating if the light level is sufficient or not.
-  """
+    Return a boolean value indicating if the light level is sufficient or not.
+    """
 
-  curr = timescale.now()
-    
-  if ISS.at(curr).is_sunlit(ephemeris):
-      return True
-  
-  else:
-      return False
+    curr = timescale.now()
+
+    if ISS.at(curr).is_sunlit(ephemeris):
+        return True
+    else:
+        return False
 
 
 def convert_cords(angle) -> tuple[bool, str]:
-    """
-    Convert a `skyfield` Angle to an EXIF-appropriate
+    """ Convert a `skyfield` Angle to an EXIF-appropriate
     representation (positive rationals)
     e.g. 98° 34' 58.7 to "98/1,34/1,587/10"
 
@@ -96,8 +116,7 @@ def convert_cords(angle) -> tuple[bool, str]:
     return sign < 0, exif_angle
 
 def convert_time(time: datetime) -> str:
-    """
-    Convert a `datetime` object to an EXIF-appropriate representation (string)
+    """ Convert a `datetime` object to an EXIF-appropriate representation (string)
     e.g. 2022-11-27 14:27:51.098019 to 2022:11:27 14:27:51
 
     Return a string containing the converted date/time.
@@ -107,10 +126,10 @@ def convert_time(time: datetime) -> str:
 
 def add_metadata(lat, latr, long, longr, t) -> None:
     """ Add the metadata tags to the camera
-        so that we know the location and can identify the
-        area on a map when we analyse the images on Earth.
+    so that we know the location and can identify the
+    area on a map when we analyse the images on Earth.
 
-        Time will also be saved for further analysis in Phase 4.
+    Time will also be saved for further analysis in Phase 4.
     """
     
     global camera
@@ -126,13 +145,16 @@ def add_metadata(lat, latr, long, longr, t) -> None:
 
 
 def take_image() -> Path:
-    """Take a picture, write metadata and return the path to the image"""
+    """ Take a picture, write metadata and return the path to the image
+
+    Return the path to the image taken as a Path object.
+    """
   
     global image_counter
     global now_time
   
     # Define output file
-    out_file = out_folder / f"img_{image_counter:04d}.jpg"
+    out_file = temp_folder / f"img_{image_counter:04d}.jpg"
 
     # Get location
     location = ISS.coordinates()
@@ -160,75 +182,74 @@ def take_image() -> Path:
     return out_file
 
 def is_useful(path:Path) -> bool:
-  """ Checks to see if the image is over water/clouds
-      so that we can delete it to save storage and processing
-      because an image largely over water is useless for the task.
-      The function takes the average light/darkness value and compares
-      it to a known threshold to determine if the image is over water/clouds.
-
-      Return a boolean value indicating if the image is useful or not.
-
-      Original source coude at:
-      https://github.com/SourishS17/Astro-Pi-2022/blob/db90b7ab1319c276c73f5d70addf7bae4b931a08/main.py#L100
-  """
+    """ Checks to see if the image is over water/clouds
+    so that we can decide to save it for our primary or alternative goals in one the 2 different output folders.
+    The function takes the average light/darkness value and compares
+    it to a known threshold to determine if the image is over water/clouds.
+    Return a boolean value indicating if the image is useful for our primary goal or not.
+        
+    Original source coude at:
+    https://github.com/SourishS17/Astro-Pi-2022/blob/db90b7ab1319c276c73f5d70addf7bae4b931a08/main.py#L100
+    """
     
-  image = cv2.imread(path).astype(np.float)
-  nir_val = np.average(image[:, :, 0]) # Average Near Infrared value
-  
-  if CLOUD_THRESHOLD > nir_val > WATER_THRESHOLD:
-      return True
-  
-  else:
-      return False
+    image = cv2.imread(path).astype(np.float)
+    nir_val = np.average(image[:, :, 0]) # Average Near Infrared value
+
+    if CLOUD_THRESHOLD > nir_val > WATER_THRESHOLD:
+        return True
+
+    else:
+        return False
 
 # --------------------------------------
 # ENTRY
 # --------------------------------------
-
 if __name__ == "__main__":
 
-  logger.info('started')
-  # run untile the program has been running for the specified RUN_TIME
-  while now_time - start_time < RUN_TIME:
-
-    now_time = datetime.now() # Update current time
+    logger.info('started')
     
-    # Check storage limit, to don't surpass 3 GB in bytes
-    if astro_memory >= 2.7e9:
-      logger.error(f'Storage limit reached with {image_counter} images')
-      break
+    # run untile the program has been running for the specified RUN_TIME
+    while now_time - start_time < RUN_TIME:
 
-    # Ensure errors don't break anything
-    try:
-      # Check if the light level is sufficient
-      if light_level() == False:
-        sleep(2)
-        continue
+        now_time = datetime.now() # Update current time
 
-      # Take picture
-      path : Path = take_image()
+        # Check storage limit, to don't surpass 3 GB in bytes
+        if astro_memory >= 2.7e9:
+            logger.error(f'Storage limit reached with {image_counter} images')
+            break
 
-      if is_useful(path) == False:
-        # Sleep a short time to avoid taking pictures too slowly
-        # Don't increment image counter as the image will be overwritten
-        sleep(0.8)
-        continue
+        # Ensure errors don't break anything
+        try:
+            # Check if the light level is sufficient
+            if light_level() == False:
+                sleep(2)
+                continue
 
-      image_counter += 1
-      astro_memory += path.stat().st_size
+            # Take picture
+            path: Path = take_image()
 
-    except Exception as e:
-      logger.exception(e)
-      sleep(1) # Recover time
-      image_counter += 2 # make error obvious
+            # Change the path of the image according to goal
+            if is_useful(path):
+                path.rename(str(primary_folder / f"img_{image_counter:04d}.jpg"))
+            else:
+                path.rename(str(alternative_folder / f"img_{image_counter:04d}.jpg"))
 
-  """
-    ____  _                ____             
-  |  _ \(_)__________ _  |  _ \  _____   __
-  | |_) | |_  /_  / _` | | | | |/ _ \ \ / /
-  |  __/| |/ / / / (_| | | |_| |  __/\ V / 
-  |_|   |_/___/___\__,_| |____/ \___| \_/  
+            image_counter += 1
+            astro_memory += path.stat().st_size
 
-  """
-  logger.info(f'execution completed with {image_counter} images (づ ᴗ _ᴗ)づ')
-  camera.close()
+        except Exception as e:
+            logger.exception(e)
+            sleep(1) # Recover time
+            image_counter += 2 # Make error obvious
+
+    logger.info(f'execution completed with {image_counter} images (づ ᴗ _ᴗ)づ')
+    camera.close()
+
+    """
+      ____  _                ____             
+    |  _ \(_)__________ _  |  _ \  _____   __
+    | |_) | |_  /_  / _` | | | | |/ _ \ \ / /
+    |  __/| |/ / / / (_| | | |_| |  __/\ V / 
+    |_|   |_/___/___\__,_| |____/ \___| \_/  
+
+    """

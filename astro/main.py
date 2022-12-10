@@ -7,8 +7,10 @@ GENERAL DESCRIPTION
     The program will also save for each image the ISS location at the time it was taken, and the time itself as metadata.
     The script will automatically stop its execution if the maximum allowed runtime is exceeded.
 
-EXCEPTION HANDLING
+EXCEPTIONS AND ERRORS HANDLING
     Exceptions and errors are handled by using a try-except statement and logged to the log file.
+    The occurence of errors/exceptions during runtime is made obvious by increasing the image counter by a value of 2 instead of 1.
+    Also the execution of the program is suspended for 1 second to ensure that 
 
 TIME MANAGEMENT
     The script will automatically stop before the 3 hours of maximum allowed runtime have passed.
@@ -24,69 +26,77 @@ STORAGE MANAGEMENT
 # --------------------------------------
 # IMPORTS
 # --------------------------------------
-from picamera import PiCamera # Take images
+import cv2 # Image processing
+import exif # Embed GPS and time data into any images
+
+import numpy as np # Array manipulation
+
 from pathlib import Path # Path utilities
+from picamera import PiCamera # Take images
+from os import fsync # Flush data to disk
+from skyfield.timelib import Timescale
+from skyfield.api import load # Load timescale data
+from time import sleep # Sleep function to supspend the execution of the program
+
 from datetime import datetime, timedelta # Time recognition
 from logzero import logger, logfile # Debug purposes
-from time import sleep # Sleep
-import exif # Embed GPS data into any images
-from os import fsync # Flush data to disk
-from orbit import ISS, ephemeris # Load the JPL ephemeris DE421 (covers 1900-2050).
-from skyfield.api import load # Load timescale data
-import numpy as np # Array manipulation
-import cv2 # Image processing
+from orbit import ISS, ephemeris # Import ISS and load the JPL ephemeris DE421 (covers 1900-2050).
 
 # --------------------------------------
 # CONSTANTS
 # --------------------------------------
-RUN_TIME = timedelta(minutes=177) # How long to run the program for
+
+# How long to run the program for
+RUN_TIME: timedelta = timedelta(minutes=177)
 
 # Sets comparative value for if an image has too much water/cloud
 # A good range is 40-50 / 90-100
-WATER_THRESHOLD = 43
-CLOUD_THRESHOLD = 100
+WATER_THRESHOLD: int = 43
+CLOUD_THRESHOLD: int = 100
 
 # --------------------------------------
 # VARIABLES
 # --------------------------------------
 
 # images counters
-image_counter = 0
-astro_memory = 30e6 # 30 MB used for logzero
+image_counter: int = 0
+astro_memory: int = 30e6 # 30 MB used for logzero
 
 # Defining initial time variables to know when to stop the program
-start_time = datetime.now()
-now_time = datetime.now()
+start_time: datetime = datetime.now()
+now_time: datetime = datetime.now()
 
 # Resolve absolute path to the current code directory
-base_folder = Path(__file__).parent.resolve()
+base_folder: Path = Path(__file__).parent.resolve()
+
 
 # Define output folders
 # The folder named 'temp' is where all the images are saved before cloud/water analysis
-# The folder named 'primary' is for all the images useful to accomplish our primary goal
-# The folder named 'alternative' is for all the images useful to accomplish our alternative goal
 temp_folder = base_folder / "temp"
 temp_folder.mkdir(parents=True, exist_ok=True)
 
+# The folder named 'primary' is for all the images useful to accomplish our primary goal
 primary_folder = base_folder / "primary"
 primary_folder.mkdir(parents=True, exist_ok=True)
 
+# The folder named 'alternative' is for all the images useful to accomplish our alternative goal
 alternative_folder = base_folder / "alternative"
 alternative_folder.mkdir(parents=True, exist_ok=True)
 
-timescale = load.timescale()
+
+# Timescale object for building and converting time
+timescale: Timescale = load.timescale()
 
 # Set log file
 logfile(base_folder / "astro.log", backupCount=0, maxBytes=30e6)
 
 # Camera settings - max res for more precise indices
-camera = PiCamera()
-camera.resolution = (4056,3040)
+camera: PiCamera = PiCamera()
+camera.resolution = (4056, 3040)
 
 # --------------------------------------
 # FUNCTIONS
 # --------------------------------------
-
 def light_level() -> bool:
     """ Check if the light level is sufficient for the camera to take a picture.
 
@@ -124,7 +134,7 @@ def convert_time(time: datetime) -> str:
 
     return time.strftime("%Y:%m:%d %H:%M:%S")
 
-def add_metadata(lat, latr, long, longr, t) -> None:
+def add_metadata(lat: str, latr: str, long: str, longr: str, t: str) -> None:
     """ Add the metadata tags to the camera
     so that we know the location and can identify the
     area on a map when we analyse the images on Earth.
@@ -181,14 +191,15 @@ def take_image() -> Path:
 
     return out_file
 
-def is_useful(path:Path) -> bool:
+def is_useful(path: Path) -> bool:
     """ Checks to see if the image is over water/clouds
-    so that we can decide to save it for our primary or alternative goals in one the 2 different output folders.
-    The function takes the average light/darkness value and compares
+    so that we can decide to save it in our primary or alternative goal folder.
+    The function takes the average light/darkness value of the image and compares
     it to a known threshold to determine if the image is over water/clouds.
+    
     Return a boolean value indicating if the image is useful for our primary goal or not.
         
-    Original source coude at:
+    Original source code at:
     https://github.com/SourishS17/Astro-Pi-2022/blob/db90b7ab1319c276c73f5d70addf7bae4b931a08/main.py#L100
     """
     
@@ -206,29 +217,31 @@ def is_useful(path:Path) -> bool:
 # --------------------------------------
 if __name__ == "__main__":
 
-    logger.info('started')
+    logger.info("Started")
     
-    # run untile the program has been running for the specified RUN_TIME
+    # Run until the program exceeds the specified RUN_TIME
     while now_time - start_time < RUN_TIME:
 
-        now_time = datetime.now() # Update current time
+        # Update the current time
+        now_time: datetime = datetime.now()
 
         # Check storage limit, to don't surpass 3 GB in bytes
         if astro_memory >= 2.7e9:
-            logger.error(f'Storage limit reached with {image_counter} images')
+            logger.error(f"Storage limit reached with {image_counter} images")
             break
 
         # Ensure errors don't break anything
         try:
             # Check if the light level is sufficient
             if light_level() == False:
+                # Suspend the program execution
                 sleep(2)
                 continue
 
             # Take picture
             path: Path = take_image()
 
-            # Change the path of the image according to goal
+            # Change the path of the image according to the goal
             if is_useful(path):
                 path.rename(str(primary_folder / f"img_{image_counter:04d}.jpg"))
             else:
@@ -238,15 +251,22 @@ if __name__ == "__main__":
             astro_memory += path.stat().st_size
 
         except Exception as e:
+            # Log the exception/error to the log file
             logger.exception(e)
-            sleep(1) # Recover time
-            image_counter += 2 # Make error obvious
+            
+            # Suspend the program execution to recover from the exception/error
+            sleep(1)
+            
+            # Make the occurence of the exception/error obvious
+            image_counter += 2
 
-    logger.info(f'execution completed with {image_counter} images (づ ᴗ _ᴗ)づ')
+    logger.info(f"execution completed with {image_counter} images (づ ᴗ _ᴗ)づ")
+
+    # Ensure the camera is closed
     camera.close()
 
     """
-      ____  _                ____             
+     ____  _                ____             
     |  _ \(_)__________ _  |  _ \  _____   __
     | |_) | |_  /_  / _` | | | | |/ _ \ \ / /
     |  __/| |/ / / / (_| | | |_| |  __/\ V / 

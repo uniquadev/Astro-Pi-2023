@@ -7,40 +7,65 @@ GENERAL DESCRIPTION
     The program will also save for each image the ISS location at the time it was taken, and the time itself as metadata.
     The script will automatically stop its execution if the maximum allowed runtime is exceeded.
 
-EXCEPTIONS AND ERRORS HANDLING
-    Exceptions and errors are handled by using a try-except statement and logged to the log file.
-    The occurence of errors/exceptions during runtime is made obvious by increasing the image counter by a value of 2 instead of 1.
-    Also the execution of the program is suspended for 1 second to ensure that 
+EXCEPTION HANDLING
+    Requirements:
+        - The program runs without errors and does not raise any unhandled exceptions.
+
+    Exceptions are handled by using a try-except statement and logged to the log file.
+    The occurence of exceptions during runtime is made obvious by increasing the image counter by a value of 2 instead of 1.
+    Also the execution of the program is suspended for 1 second to ensure that the Astro-Pi computer fully recovers from the exception.
 
 TIME MANAGEMENT
+    Requirements:
+        - The program monitors its running time and stops after 3 hours have elapsed.
+
     The script will automatically stop before the 3 hours of maximum allowed runtime have passed.
     This is accomplished through the datetime library.
     The maximum allowed runtime is set to 177 minutes, 3 minutes less than 180, to ensure that the requirement is satisfied in case of any delay.
 
 STORAGE MANAGEMENT
-    If the maximum storage limit of 3GB is exceeded the program will no longer save data.
-    To ensure this the 'astro_memory' variable (representing the storage already used) is initialized with a value of 30e6 (the estimated final size of the log file)
-    and updated every time a photo is taken.
+    Requirements:
+        - The program only saves data in the folder where the main Python file is, as described in the Phase 2 guide 
+        (i.e. using the special __file__ variable), and that no absolute path names are used.
+
+        - The program does not use more than 3GB of space to store data.
+
+        - Any files that the program creates have names that only include letters, numbers, dots (.), dashes (-), or underscores (_).
+    
+    The program only saves data in the folder where the main Python file is by resolving its path name using the special __file__ variable and no absolute path names are used.
+
+    To ensure that the second requirement is satisfied if the maximum storage limit of 3GB is exceeded the program will no longer save data.
+    This is accomplished through the 'astro_memory' variable (representing the filled storage) that is initialized with a value of 30e6 (the maximum size of the log file in bytes) and updated every time a photo is taken.
+    The fsync() function is  also used to assure that, after a system crash or other failure, all data up to the time of the fsync() call is recorded on the disk.
+
+    The files created by the program have names that satisfy the third requirement.
+
+CODE STYLE AND DOCUMENTATION
+    Requirements:
+        - The program is documented and easy to understand, and that there is no attempt to hide or obfuscate what a piece of code does.
+
+    In order to satisfy this requirement we decided to follow the PEP 8 style guide for Python code.
 """
 
 # --------------------------------------
 # IMPORTS
 # --------------------------------------
-import cv2 # Image processing
-import exif # Embed GPS and time data into any images
 
-import numpy as np # Array manipulation
+import cv2  # Image processing
+import exif  # Embed GPS and time data into any images
 
-from pathlib import Path # Path utilities
-from picamera import PiCamera # Take images
-from os import fsync # Flush data to disk
+import numpy as np  # Array manipulation
+
+from pathlib import Path  # Path utilities
+from picamera import PiCamera  # Take images
+from os import fsync  # Flush data to disk
 from skyfield.timelib import Timescale
-from skyfield.api import load # Load timescale data
-from time import sleep # Sleep function to supspend the execution of the program
+from skyfield.api import load  # Load timescale data
+from time import sleep  # Sleep function to supspend the execution of the program
 
-from datetime import datetime, timedelta # Time recognition
-from logzero import logger, logfile # Debug purposes
-from orbit import ISS, ephemeris # Import ISS and load the JPL ephemeris DE421 (covers 1900-2050).
+from datetime import datetime, timedelta  # Time recognition
+from logzero import logger, logfile  # Debug purposes
+from orbit import ISS, ephemeris  # Import ISS and load the JPL ephemeris DE421 (covers 1900-2050).
 
 # --------------------------------------
 # CONSTANTS
@@ -60,7 +85,8 @@ CLOUD_THRESHOLD: int = 100
 
 # images counters
 image_counter: int = 0
-astro_memory: int = 30e6 # 30 MB used for logzero
+# 30 MB used by the log file
+astro_memory: int = 30e6
 
 # Defining initial time variables to know when to stop the program
 start_time: datetime = datetime.now()
@@ -97,8 +123,9 @@ camera.resolution = (4056, 3040)
 # --------------------------------------
 # FUNCTIONS
 # --------------------------------------
+
 def light_level() -> bool:
-    """ Check if the light level is sufficient for the camera to take a picture.
+    """Check if the light level is sufficient for the camera to take a picture.
 
     Return a boolean value indicating if the light level is sufficient or not.
     """
@@ -112,7 +139,7 @@ def light_level() -> bool:
 
 
 def convert_cords(angle) -> tuple[bool, str]:
-    """ Convert a `skyfield` Angle to an EXIF-appropriate
+    """Convert a `skyfield` Angle to an EXIF-appropriate
     representation (positive rationals)
     e.g. 98° 34' 58.7 to "98/1,34/1,587/10"
 
@@ -125,8 +152,9 @@ def convert_cords(angle) -> tuple[bool, str]:
     
     return sign < 0, exif_angle
 
+
 def convert_time(time: datetime) -> str:
-    """ Convert a `datetime` object to an EXIF-appropriate representation (string)
+    """Convert a `datetime` object to an EXIF-appropriate representation (string)
     e.g. 2022-11-27 14:27:51.098019 to 2022:11:27 14:27:51
 
     Return a string containing the converted date/time.
@@ -134,8 +162,9 @@ def convert_time(time: datetime) -> str:
 
     return time.strftime("%Y:%m:%d %H:%M:%S")
 
+
 def add_metadata(lat: str, latr: str, long: str, longr: str, t: str) -> None:
-    """ Add the metadata tags to the camera
+    """Add the metadata tags to the camera
     so that we know the location and can identify the
     area on a map when we analyse the images on Earth.
 
@@ -155,7 +184,7 @@ def add_metadata(lat: str, latr: str, long: str, longr: str, t: str) -> None:
 
 
 def take_image() -> Path:
-    """ Take a picture, write metadata and return the path to the image
+    """Take a picture, write metadata and return the path to the image
 
     Return the path to the image taken as a Path object.
     """
@@ -191,8 +220,9 @@ def take_image() -> Path:
 
     return out_file
 
+
 def is_useful(path: Path) -> bool:
-    """ Checks to see if the image is over water/clouds
+    """Checks to see if the image is over water/clouds
     so that we can decide to save it in our primary or alternative goal folder.
     The function takes the average light/darkness value of the image and compares
     it to a known threshold to determine if the image is over water/clouds.
@@ -208,13 +238,14 @@ def is_useful(path: Path) -> bool:
 
     if CLOUD_THRESHOLD > nir_val > WATER_THRESHOLD:
         return True
-
     else:
         return False
+
 
 # --------------------------------------
 # ENTRY
 # --------------------------------------
+
 if __name__ == "__main__":
 
     logger.info("Started")
@@ -225,7 +256,7 @@ if __name__ == "__main__":
         # Update the current time
         now_time: datetime = datetime.now()
 
-        # Check storage limit, to don't surpass 3 GB in bytes
+        # Check storage limit to not exceed 3 GB
         if astro_memory >= 2.7e9:
             logger.error(f"Storage limit reached with {image_counter} images")
             break
@@ -262,7 +293,7 @@ if __name__ == "__main__":
 
     logger.info(f"execution completed with {image_counter} images (づ ᴗ _ᴗ)づ")
 
-    # Ensure the camera is closed
+    # Ensure the camera is correctly closed
     camera.close()
 
     """

@@ -36,7 +36,6 @@ STORAGE MANAGEMENT
 
     To ensure that the second requirement is satisfied if the maximum storage limit of 3GB is exceeded the program will no longer save data.
     This is accomplished through the 'astro_memory' variable (representing the filled storage) that is initialized with a value of 30e6 (the maximum size of the log file in bytes) and updated every time a photo is taken.
-    The fsync() function is  also used to assure that, after a system crash or other failure, all data up to the time of the fsync() call is recorded on the disk.
 
     The files created by the program have names that satisfy the third requirement.
 

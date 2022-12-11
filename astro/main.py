@@ -58,7 +58,6 @@ import numpy as np  # Array manipulation
 
 from pathlib import Path  # Path utilities
 from picamera import PiCamera  # Take images
-from os import fsync  # Flush data to disk
 from skyfield.timelib import Timescale
 from skyfield.api import load  # Load timescale data
 from time import sleep  # Sleep function to supspend the execution of the program
@@ -86,7 +85,7 @@ CLOUD_THRESHOLD: int = 100
 # images counters
 image_counter: int = 0
 # 30 MB used by the log file
-astro_memory: int = 30e6
+astro_memory: float = 30e6
 
 # Defining initial time variables to know when to stop the program
 start_time: datetime = datetime.now()
@@ -214,9 +213,6 @@ def take_image() -> Path:
 
     # Take image
     camera.capture(str(out_file))
-
-    # Flush data to disk
-    fsync()
 
     return out_file
 

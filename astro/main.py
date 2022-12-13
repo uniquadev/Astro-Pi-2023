@@ -2,10 +2,8 @@
 
 GENERAL DESCRIPTION
     This script will run aboard the ISS taking pictures of the Earth surface depending if there is enough light or free storage.
-    Every time a photo is taken, the script will automatically determine the average NIR (near infrared) value of the image to decide whether it is useful our primary or alternative goal (backup plan).
-    According to this distinction we decided to save images in 2 different folders named 'primary' and 'alternative').
     The program will also save for each image the ISS location at the time it was taken, and the time itself as metadata.
-    The script will automatically stop its execution if the maximum allowed runtime is exceeded.
+    The script will automatically stop its execution to not exceed the maximum allowed runtime (3 hours).
 
 EXCEPTION HANDLING
     Requirements:
@@ -34,7 +32,7 @@ STORAGE MANAGEMENT
     
     The program only saves data in the folder where the main Python file is by resolving its path name using the special __file__ variable and no absolute path names are used.
 
-    To ensure that the second requirement is satisfied if the maximum storage limit of 3GB is exceeded the program will no longer save data.
+    To ensure that the second requirement is satisfied if the maximum storage limit of 3GB is exceeded the program will stop its execution.
     This is accomplished through the 'astro_memory' variable (representing the filled storage) that is initialized with a value of 30e6 (the maximum size of the log file in bytes) and updated every time a photo is taken.
 
     The files created by the program have names that satisfy the third requirement.
@@ -72,11 +70,6 @@ from orbit import ISS, ephemeris  # Import ISS and load the JPL ephemeris DE421 
 # How long to run the program for
 RUN_TIME: timedelta = timedelta(minutes=177)
 
-# Sets comparative value for if an image has too much water/cloud
-# A good range is 40-50 / 90-100
-WATER_THRESHOLD: int = 43
-CLOUD_THRESHOLD: int = 100
-
 # --------------------------------------
 # VARIABLES
 # --------------------------------------
@@ -94,18 +87,9 @@ now_time: datetime = datetime.now()
 base_folder: Path = Path(__file__).parent.resolve()
 
 
-# Define output folders
-# The folder named 'temp' is where all the images are saved before cloud/water analysis
-temp_folder = base_folder / "temp"
-temp_folder.mkdir(parents=True, exist_ok=True)
-
-# The folder named 'primary' is for all the images useful to accomplish our primary goal
-primary_folder = base_folder / "primary"
-primary_folder.mkdir(parents=True, exist_ok=True)
-
-# The folder named 'alternative' is for all the images useful to accomplish our alternative goal
-alternative_folder = base_folder / "alternative"
-alternative_folder.mkdir(parents=True, exist_ok=True)
+# Define output folder for images
+out_folder = base_folder / "out"
+out_folder.mkdir(parents=True, exist_ok=True)
 
 
 # Timescale object for building and converting time
@@ -191,7 +175,7 @@ def take_image() -> Path:
     global now_time
   
     # Define output file
-    out_file = temp_folder / f"img_{image_counter:04d}.jpg"
+    out_file = out_folder / f"img_{image_counter:04d}.jpg"
 
     # Get location
     location = ISS.coordinates()
@@ -214,27 +198,6 @@ def take_image() -> Path:
     camera.capture(str(out_file))
 
     return out_file
-
-
-def is_useful(path: Path) -> bool:
-    """Checks to see if the image is over water/clouds
-    so that we can decide to save it in our primary or alternative goal folder.
-    The function takes the average light/darkness value of the image and compares
-    it to a known threshold to determine if the image is over water/clouds.
-    
-    Return a boolean value indicating if the image is useful for our primary goal or not.
-        
-    Original source code at:
-    https://github.com/SourishS17/Astro-Pi-2022/blob/db90b7ab1319c276c73f5d70addf7bae4b931a08/main.py#L100
-    """
-    
-    image = cv2.imread(path).astype(np.float)
-    nir_val = np.average(image[:, :, 0]) # Average Near Infrared value
-
-    if CLOUD_THRESHOLD > nir_val > WATER_THRESHOLD:
-        return True
-    else:
-        return False
 
 
 # --------------------------------------
@@ -267,13 +230,10 @@ if __name__ == "__main__":
             # Take picture
             path: Path = take_image()
 
-            # Change the path of the image according to the goal
-            if is_useful(path):
-                path.rename(str(primary_folder / f"img_{image_counter:04d}.jpg"))
-            else:
-                path.rename(str(alternative_folder / f"img_{image_counter:04d}.jpg"))
-
+            # Increase image counter
             image_counter += 1
+            
+            # Update the astro_memory variable representing the filled storage
             astro_memory += path.stat().st_size
 
         except Exception as e:

@@ -236,6 +236,9 @@ if __name__ == "__main__":
             # Update the astro_memory variable representing the filled storage
             astro_memory += path.stat().st_size
 
+            # Sleep to decrease memory usage over time
+            sleep(5)
+
         except Exception as e:
             # Log the exception/error to the log file
             logger.exception(e)

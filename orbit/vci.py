@@ -25,6 +25,8 @@ VCI_RANGES = [
 ]
 
 def vci_classify(vci:int) -> VEGETATIONSTATE:
+    assert 0 <= vci <= 100, f"VCI must be between 0 and 100, got {vci}"
+    
     for range in VCI_RANGES:
         if vci >= range[0] and vci <= range[1]:
             return range[2]

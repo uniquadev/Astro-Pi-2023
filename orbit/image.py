@@ -28,13 +28,13 @@ class AstroImage:
         cv2.waitKey(0)
 
 
-def ndvi(image: AstroImage) -> np.ndarray:
+def ndvi(image_pixels) -> np.ndarray:
     """Calculate NDVI on the given image.
 
     Return a numpy ndarray with a NDVI value for each pixel of the image.
     """
 
-    blue, green, red = cv2.split(image.pixels)
+    blue, green, red = cv2.split(image_pixels)
     
     bottom = (red.astype(float) + blue.astype(float))
     bottom[bottom==0] = 0.01  # Avoid zero division error

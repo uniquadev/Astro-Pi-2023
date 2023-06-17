@@ -1,45 +1,61 @@
+import os
 import cv2
 import numpy as np
 
-# Load the NIR image using OpenCV
-nir_image = cv2.imread('../out/img_0000.jpg', cv2.IMREAD_COLOR)
-
-# Extract the NIR channel (e.g., green channel)
-nir_channel = nir_image[:, :, 1]  # Green channel index is 1
-
-# Set the threshold for water detection
-threshold = 0.8
-
-# Convert NIR channel to binary water mask
-_, cloud_mask = cv2.threshold(nir_channel, int(threshold * 255), 255, cv2.THRESH_BINARY)
-
-screen_width = 800  # Adjust the screen width as desired
-scale_factor = min(screen_width / nir_image.shape[1], 1.0)
-resized_nir = cv2.resize(nir_image, None, fx=scale_factor, fy=scale_factor)
-resized_cloud_mask = cv2.resize(water_mask, None, fx=scale_factor, fy=scale_factor)
-
-# Create a red-colored mask
-red_mask = np.zeros_like(resized_nir)
-red_mask[:, :, 2] = resized_cloud_mask  # Set the red channel of the mask to the cloud mask
+from pathlib import Path
 
 
-# Calculate the total number of pixels
-total_pixels = resized_cloud_mask.size
-
-# Count the number of cloud pixels
-cloud_pixel_count = np.count_nonzero(resized_cloud_mask)
-
-# Calculate the percentage of cloud pixels
-cloud_percentage = (cloud_pixel_count / total_pixels) * 100
-
-# Print the number of pixels covered by clouds and the total percentage
-print("Water Pixels: ", cloud_pixel_count)
-print("Total Pixels: ", total_pixels)
-print("Water Percentage: ", cloud_percentage)
+def show_img(image, title):
+    cv2.imshow(title, image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
-# Display the resized NIR image and the red-colored mask
-cv2.imshow('Resized NIR Image', resized_nir)
-cv2.imshow('Red Water Mask', red_mask)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+
+def resize_img(image, scale_factor):
+    resized_nir = cv2.resize(image, None, fx=scale_factor, fy=scale_factor)
+
+
+def load_images(folder):
+    images_path = []
+    images = os.listdir(folder)
+
+    for image in images:
+        images_path.append(folder + image)
+
+    return images_path
+
+class ThresholdClassifier:
+
+    def __init__(self, images_path, out_dir) -> None:
+        self.images_path = images_path
+        self.out_dir = out_dir
+
+
+    def start(self, cloud_threshold, percentage_threshold):
+        for path in self.images_path:
+            print(path, end="\r")
+            nir_image = cv2.imread(path, cv2.IMREAD_COLOR)
+            nir_channel = nir_image[:, :, 1]  # Select the green challenge of each pixel
+
+            _, cloud_mask = cv2.threshold(nir_channel, int(cloud_threshold * 255), 255, cv2.THRESH_BINARY)
+
+            red_mask = np.zeros_like(nir_image)
+            red_mask[:, :, 2] = cloud_mask  # Set the red channel of the mask to the cloud mask
+
+            total_pixels = cloud_mask.size
+
+            # Count the number of cloud pixels
+            cloud_pixel_count = np.count_nonzero(cloud_mask)
+
+            # Calculate the percentage of cloud pixels
+            cloud_percentage = round((cloud_pixel_count / total_pixels) * 100, 1)
+
+            if cloud_percentage < percentage_threshold:
+                os.system(f"cp {path} {self.out_dir}")
+
+
+if __name__ == "__main__":
+    images_path = load_images("../out/")
+    classifier = ThresholdClassifier(images_path, "./no_clouds/")
+    classifier.start(cloud_threshold=0.7, percentage_threshold=25)

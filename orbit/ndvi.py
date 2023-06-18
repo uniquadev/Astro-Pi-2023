@@ -5,29 +5,6 @@ PYTHON MODULE FOR IMAGE PROCESSING AND NDVI CALCULATIONS
 import cv2
 import numpy as np
 
-class AstroImage:
-    """A class to facilitate analysis with images taken from ISS.
-    """
-
-    def __init__(self, path: str) -> None:
-        
-        self.path = path
-        
-        image = cv2.imread(self.path)  # Load image
-        self.pixels = np.array(image, dtype=float) / float(255)  # Convert to an array
-
-        self.shape = self.pixels.shape
-        self.height, self.width = list(map(int, self.shape[:2]))
-
-    def show(self):
-        """Show the AstroImage until any key is pressed.
-        """
-
-        cv2.namedWindow("AstroImage")
-        cv2.imshow(self.path, self.pixels)
-        cv2.waitKey(0)
-
-
 def ndvi(image_pixels) -> np.ndarray:
     """Calculate NDVI on the given image.
 
@@ -42,7 +19,7 @@ def ndvi(image_pixels) -> np.ndarray:
     
     return ndvi
 
-def mean_ndvi(image: AstroImage) -> float:
+def mean_ndvi(image_pixels) -> float:
     """ Calculate the mean NDVI value over all the pixels of the given image.
 
     Return a float representing the mean NDVI value of the image.

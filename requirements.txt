@@ -3,3 +3,4 @@ exif
 skyfield
 orbit
 picamera
+opencv-python

@@ -1,23 +1,21 @@
 import os
 import cv2
+from shutil import move as move_file
 import numpy as np
-from pathlib import Path
-
 from ndvi import ndvi
 
-
-def show_img(image, title):
+def show_img(image : str, title : str):
     cv2.imshow(title, image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 
-def resize_img(image, scale_factor):
+def resize_img(image : str, scale_factor : float):
     resized = cv2.resize(image, None, fx=scale_factor, fy=scale_factor)
     return resized
 
 
-def load_images(folder):
+def load_images(folder : str):
     images_path = []
     images = os.listdir(folder)
 
@@ -27,11 +25,16 @@ def load_images(folder):
     return images_path
 
 
-class DarkImageClassifier:
+class BaseClassifier:
 
-    def __init__(self, images_path, out_dir) -> None:
+    def __init__(self, images_path : str, out_dir : str) -> None:
         self.images_path = images_path
         self.out_dir = out_dir
+
+    def start(self):
+        pass
+
+class DarkImageClassifier(BaseClassifier):
 
     def start(self, threshold):
         for path in self.images_path:
@@ -40,15 +43,11 @@ class DarkImageClassifier:
             avg_intensity = np.average(gray)
 
             if avg_intensity > threshold:
-                os.system(f"cp {path} {self.out_dir}")
+                move_file(path, self.out_dir)
 
 
 
-class OtsuThresholdClassifier:
-
-    def __init__(self, images_path, out_dir) -> None:
-        self.images_path = images_path
-        self.out_dir = out_dir
+class OtsuThresholdClassifier(BaseClassifier):
 
     def start(self, percentage_threshold):
         for path in self.images_path:
@@ -61,16 +60,11 @@ class OtsuThresholdClassifier:
             percentage = round((pixel_count / total_pixels) * 100, 1)
 
             if percentage < percentage_threshold:
-                os.system(f"cp {path} {self.out_dir}")
+                move_file(path, self.out_dir)
 
 
 
-class ThresholdClassifier:
-
-    def __init__(self, images_path, out_dir) -> None:
-        self.images_path = images_path
-        self.out_dir = out_dir
-
+class ThresholdClassifier(BaseClassifier):
 
     def start(self, pixel_threshold, percentage_threshold):
         for path in self.images_path:
@@ -92,14 +86,10 @@ class ThresholdClassifier:
             percentage = round((pixel_count / total_pixels) * 100, 1)
 
             if percentage < percentage_threshold:
-                os.system(f"cp {path} {self.out_dir}")
+                move_file(path, self.out_dir)
 
 
-class NDVIClassifier:
-
-    def __init__(self, images_path, out_dir) -> None:
-        self.images_path = images_path
-        self.out_dir = out_dir
+class NDVIClassifier(BaseClassifier):
 
     def start(self, ndvi_range, percentage_threshold):
         for path in self.images_path:
@@ -113,4 +103,4 @@ class NDVIClassifier:
             percentage = round((pixel_count / total_pixels) * 100, 1)
 
             if percentage < percentage_threshold:
-                os.system(f"cp {path} {self.out_dir}")
+                move_file(path, self.out_dir)

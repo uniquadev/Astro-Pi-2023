@@ -1,6 +1,6 @@
 import cv2
 
-from classifiers import resize_img
+from utils.classifiers import resize_img
 
 # Load the NIR image
 nir_image = cv2.imread('../out/img_0375.jpg', cv2.IMREAD_GRAYSCALE)

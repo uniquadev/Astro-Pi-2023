@@ -3,11 +3,19 @@
 # --------------------------------------
 import os # Operating system dependent functionality
 import cv2 # Image processing
+from datetime import datetime
 from shutil import copy as copy_file # Move files
 from pathlib import Path  # Path utilities
 import numpy as np # Array manipulation
+from global_land_mask import globe # reverse geocoding for water
+from PIL import Image
+from PIL.ExifTags import TAGS
 
 from .ndvi import ndvi # Normalized Difference Vegetation Index
+from .gsd import gsd
+from .iss import iss_altitude
+from.angle import degrees_to_decimal
+from .bounding_box import bounding_box
 
 # --------------------------------------
 # FUNCTIONS
@@ -43,6 +51,38 @@ class BaseClassifier:
 
     def start(self):
         pass
+
+
+class WaterClassifier(BaseClassifier):
+
+    def start(self, threshold, sensor_width, sensor_height, focal_length, accuracy):
+        for path in self.images_path.iterdir():
+            image = Image.open(path)
+            exifdata = image.getexif()
+            metadata = {TAGS.get(id, id): exifdata.get(id) for id in exifdata}
+            date = datetime.strptime(str(metadata["DateTimeOriginal"]), "%Y/%m/%d, %H:%M:%S")
+            timestamp = datetime.timestamp(date)
+
+            flight_height = iss_altitude(timestamp)
+            distance_width, distance_height = gsd(sensor_width, sensor_height, focal_length, flight_height)
+
+            latitude, longitude = metadata["GPS.GPSLatitude"], metadata["GPS.GPSLongitude"]
+            latitude, longitude = degrees_to_decimal(latitude), degrees_to_decimal(longitude)
+
+            top_left, top_right, bottom_left, bottom_right = bounding_box(latitude, longitude, distance_width, distance_height)
+
+            land_points = 0
+            for i in range(top_left[1], bottom_left[1], accuracy):
+                for j in range(top_left[0], top_right[0], accuracy):
+                    globe.is_land(i, j)
+
+            total_points = len(range(top_left[1], bottom_left[1], accuracy)) * len(range(top_left[0], top_right[0], accuracy))
+            percentage = land_points / total_points
+
+            if percentage > threshold:
+                copy_file(path, self.out_dir)
+
+
 
 class DarkImageClassifier(BaseClassifier):
 

@@ -1,9 +1,17 @@
-import os
-import cv2
-from shutil import move as move_file
-import numpy as np
-from ndvi import ndvi
+# --------------------------------------
+# IMPORTS
+# --------------------------------------
+import os # Operating system dependent functionality
+import cv2 # Image processing
+from shutil import copy as copy_file # Move files
+from pathlib import Path  # Path utilities
+import numpy as np # Array manipulation
 
+from .ndvi import ndvi # Normalized Difference Vegetation Index
+
+# --------------------------------------
+# FUNCTIONS
+# --------------------------------------
 def show_img(image : str, title : str):
     cv2.imshow(title, image)
     cv2.waitKey(0)
@@ -24,10 +32,12 @@ def load_images(folder : str):
 
     return images_path
 
-
+# --------------------------------------
+# CLASSIFIERS
+# --------------------------------------
 class BaseClassifier:
 
-    def __init__(self, images_path : str, out_dir : str) -> None:
+    def __init__(self, images_path : Path, out_dir : str) -> None:
         self.images_path = images_path
         self.out_dir = out_dir
 
@@ -37,21 +47,21 @@ class BaseClassifier:
 class DarkImageClassifier(BaseClassifier):
 
     def start(self, threshold):
-        for path in self.images_path:
-            image = cv2.imread(path)
+        for path in self.images_path.iterdir():
+            image = cv2.imread(str(path))
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             avg_intensity = np.average(gray)
 
             if avg_intensity > threshold:
-                move_file(path, self.out_dir)
+                copy_file(path, self.out_dir)
 
 
 
 class OtsuThresholdClassifier(BaseClassifier):
 
     def start(self, percentage_threshold):
-        for path in self.images_path:
-            image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        for path in self.images_path.iterdir():
+            image = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
             _, thresholded = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             
             pixel_count = cv2.countNonZero(thresholded)
@@ -60,16 +70,15 @@ class OtsuThresholdClassifier(BaseClassifier):
             percentage = round((pixel_count / total_pixels) * 100, 1)
 
             if percentage < percentage_threshold:
-                move_file(path, self.out_dir)
+                copy_file(path, self.out_dir)
 
 
 
 class ThresholdClassifier(BaseClassifier):
 
     def start(self, pixel_threshold, percentage_threshold):
-        for path in self.images_path:
-            print(path)
-            nir_image = cv2.imread(path, cv2.IMREAD_COLOR)
+        for path in self.images_path.iterdir():
+            nir_image = cv2.imread(str(path), cv2.IMREAD_COLOR)
             nir_channel = nir_image[:, :, 1]  # Select the green challenge of each pixel
 
             _, mask = cv2.threshold(nir_channel, int(pixel_threshold * 255), 255, cv2.THRESH_BINARY)
@@ -86,21 +95,21 @@ class ThresholdClassifier(BaseClassifier):
             percentage = round((pixel_count / total_pixels) * 100, 1)
 
             if percentage < percentage_threshold:
-                move_file(path, self.out_dir)
+                copy_file(path, self.out_dir)
 
 
 class NDVIClassifier(BaseClassifier):
 
     def start(self, ndvi_range, percentage_threshold):
-        for path in self.images_path:
-            image = cv2.imread(path, cv2.IMREAD_COLOR)
+        for path in self.images_path.iterdir():
+            image = cv2.imread(str(path), cv2.IMREAD_COLOR)
             image_pixels = np.array(image, dtype=float) / float(255)
 
             total_pixels = image_pixels.size
             ndvi_values = ndvi(image_pixels)
-            pixel_count = np.count_nonzero((ndvi_values < ndvi_range[1] & ndvi_values > ndvi_range[0]))
+            pixel_count = np.count_nonzero((ndvi_values < ndvi_range[1]) & (ndvi_values > ndvi_range[0]))
 
             percentage = round((pixel_count / total_pixels) * 100, 1)
 
             if percentage < percentage_threshold:
-                move_file(path, self.out_dir)
+                copy_file(path, self.out_dir)

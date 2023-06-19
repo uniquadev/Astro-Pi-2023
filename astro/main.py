@@ -249,7 +249,7 @@ if __name__ == "__main__":
             # Make the occurence of the exception/error obvious
             image_counter += 2
 
-    logger.info(f"execution completed with {image_counter} images (づ ᴗ _ᴗ)づ")
+    logger.info(f"execution completed with {image_counter} images")
 
     # Ensure the camera is correctly closed
     camera.close()

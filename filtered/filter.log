@@ -1,0 +1,5 @@
+[I 230619 18:01:56 main:65] Found 463 images
+[I 230619 18:03:19 main:76] Removed 97 dark images
+[I 230619 18:04:28 main:87] Removed 124 cloudy images
+[I 230619 18:07:27 main:99] Removed 187 sea images
+[I 230619 18:07:27 main:103] execution completed in 0:05:31.489847, with 55 images

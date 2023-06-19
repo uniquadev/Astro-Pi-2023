@@ -9,3 +9,7 @@ out/
 
 # Ingore log files
 *.log
+
+# Not ignore result astro.log & filter.log file
+!astro/phase3/astro.log
+!filtered/filter.log

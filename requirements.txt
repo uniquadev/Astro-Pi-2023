@@ -2,5 +2,5 @@ logzero
 exif
 skyfield
 orbit
-picamera # not needed
 opencv-python
+# picamera # only for raspberry pi

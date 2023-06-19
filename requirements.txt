@@ -2,4 +2,5 @@ logzero
 exif
 skyfield
 orbit
-picamera
+picamera # not needed
+opencv-python

@@ -53,7 +53,7 @@ class OtsuThresholdClassifier:
     def start(self, percentage_threshold):
         for path in self.images_path:
             image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-            _, thresholded = cv2.threshold(nir_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            _, thresholded = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             
             pixel_count = cv2.countNonZero(thresholded)
             total_pixels = thresholded.size

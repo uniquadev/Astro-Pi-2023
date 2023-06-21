@@ -3,6 +3,7 @@
 # --------------------------------------
 import os # Operating system dependent functionality
 import cv2 # Image processing
+import json
 from datetime import datetime
 from shutil import copy as copy_file # Move files
 from pathlib import Path  # Path utilities
@@ -14,8 +15,9 @@ from PIL.ExifTags import TAGS
 from .ndvi import ndvi # Normalized Difference Vegetation Index
 from .gsd import gsd
 from .iss import iss_altitude
-from.angle import degrees_to_decimal
 from .bounding_box import bounding_box
+from utils.metadata import get_image_metadata, get_coordinates
+
 
 # --------------------------------------
 # FUNCTIONS
@@ -45,7 +47,7 @@ def load_images(folder : str):
 # --------------------------------------
 class BaseClassifier:
 
-    def __init__(self, images_path : Path, out_dir : str) -> None:
+    def __init__(self, images_path : Path, out_dir : Path) -> None:
         self.images_path = images_path
         self.out_dir = out_dir
 
@@ -55,32 +57,17 @@ class BaseClassifier:
 
 class WaterClassifier(BaseClassifier):
 
-    def start(self, threshold, sensor_width, sensor_height, focal_length, accuracy):
-        for path in self.images_path.iterdir():
-            image = Image.open(path)
-            exifdata = image.getexif()
-            metadata = {TAGS.get(id, id): exifdata.get(id) for id in exifdata}
-            date = datetime.strptime(str(metadata["DateTimeOriginal"]), "%Y/%m/%d, %H:%M:%S")
-            timestamp = datetime.timestamp(date)
+    def start(self, water_threshold):
 
-            flight_height = iss_altitude(timestamp)
-            distance_width, distance_height = gsd(sensor_width, sensor_height, focal_length, flight_height)
+        with open('./water_percentages.json') as json_file:
+            data = json.load(json_file)
 
-            latitude, longitude = metadata["GPS.GPSLatitude"], metadata["GPS.GPSLongitude"]
-            latitude, longitude = degrees_to_decimal(latitude), degrees_to_decimal(longitude)
+            for feature in data["features"]:
+                path = self.images_path / feature["properties"]["path"].split("/")[-1]
+                water_percentage = feature["properties"]["water_percentage"]
 
-            top_left, top_right, bottom_left, bottom_right = bounding_box(latitude, longitude, distance_width, distance_height)
-
-            land_points = 0
-            for i in range(top_left[1], bottom_left[1], accuracy):
-                for j in range(top_left[0], top_right[0], accuracy):
-                    globe.is_land(i, j)
-
-            total_points = len(range(top_left[1], bottom_left[1], accuracy)) * len(range(top_left[0], top_right[0], accuracy))
-            percentage = land_points / total_points
-
-            if percentage > threshold:
-                copy_file(path, self.out_dir)
+                if water_percentage < water_threshold:
+                    copy_file(path, self.out_dir)
 
 
 

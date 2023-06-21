@@ -9,4 +9,4 @@ def iss_altitude(timestamp) -> float:
     api_url = f"https://api.wheretheiss.at/v1/satellites/25544?timestamp={timestamp}"
     r = requests.get(api_url).json()
     
-    return r["altitude"]
+    return r["altitude"] * 10**3

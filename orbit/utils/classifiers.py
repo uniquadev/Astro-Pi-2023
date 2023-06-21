@@ -22,18 +22,42 @@ from utils.metadata import get_image_metadata, get_coordinates
 # --------------------------------------
 # FUNCTIONS
 # --------------------------------------
-def show_img(image : str, title : str):
+def show_img(image: np.array, title: str):
+    """Show an image.
+    
+    Args:
+        image (np.array): the image to be displayed.
+        title (str): the title of the window showing the image.
+
+    """
     cv2.imshow(title, image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 
-def resize_img(image : str, scale_factor : float):
+def resize_img(image: str, scale_factor: float):
+    """Resize an image.
+
+    Args:
+        image (np.array): the image to be resized.
+        scale_factor (float): the scale factor used to resize the image.
+    
+    Returns:
+        np.array: The resized image.
+
+    """
     resized = cv2.resize(image, None, fx=scale_factor, fy=scale_factor)
     return resized
 
 
-def load_images(folder : str):
+def load_images(folder: str):
+    """Load images from a given folder.
+    Args:
+        folder (str): the path to the folder.
+
+    Returns:
+        list: A list with a path for each image in the given folder.
+    """
     images_path = []
     images = os.listdir(folder)
 
@@ -42,12 +66,26 @@ def load_images(folder : str):
 
     return images_path
 
+
 # --------------------------------------
 # CLASSIFIERS
 # --------------------------------------
 class BaseClassifier:
+    """The base class for a classifier
+    
+    Attributes:
+        images_path (Path): The path to the folder containing the images to be filtered.
+        out_dir (Path): The output folder that will contain the images filtered.
+    """
 
-    def __init__(self, images_path : Path, out_dir : Path) -> None:
+    def __init__(self, images_path: Path, out_dir: Path) -> None:
+        """ Instantiate the classifier.
+
+        Args:
+            images_path (Path): The path to the folder containing the images to be filtered.
+            out_dir (Path): The output folder that will contain the images filtered.
+
+        """
         self.images_path = images_path
         self.out_dir = out_dir
 
@@ -55,8 +93,9 @@ class BaseClassifier:
         pass
 
 
-class WaterClassifier(BaseClassifier):
+""" A water classifier to use with a google earth engine script
 
+class WaterClassifier(BaseClassifier):
     def start(self, water_threshold):
 
         with open('./water_percentages.json') as json_file:
@@ -68,12 +107,21 @@ class WaterClassifier(BaseClassifier):
 
                 if water_percentage < water_threshold:
                     copy_file(path, self.out_dir)
-
+"""
 
 
 class DarkImageClassifier(BaseClassifier):
+    """Classifier to remove dark images.
+    """
 
     def start(self, threshold):
+        """Analyze the images in self.images_path by turning the images into grayscale and 
+        calculating the average intensity of the pixels. Then it moves the non-dark images into self.out_dir.
+
+        Args:
+            threshold: The maximum average intensity to keep an image.
+
+        """
         for path in self.images_path.iterdir():
             image = cv2.imread(str(path))
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -85,8 +133,20 @@ class DarkImageClassifier(BaseClassifier):
 
 
 class OtsuThresholdClassifier(BaseClassifier):
+    """Classifier to remove images taken over clouds using the otsu method.
+    """
 
     def start(self, percentage_threshold):
+        """Analyze the images in self.images_path by applying the otsu method which is 
+        calculating and applying the optimal threshold in order to distinguish the foreground (clouds) from the background for each image.
+        After applying the threshold it calculates the percentage of the image covered by clouds and 
+        moves the images with a percentage lower than percentage_threshold into self.out_dir.
+
+
+        Args:
+            percentage_threshold: The maximum percentage of clouds to keep an image.
+
+        """
         for path in self.images_path.iterdir():
             image = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
             _, thresholded = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -102,8 +162,20 @@ class OtsuThresholdClassifier(BaseClassifier):
 
 
 class ThresholdClassifier(BaseClassifier):
+    """A simple threshold classifier to remove images taken over clouds.
+    """
 
     def start(self, pixel_threshold, percentage_threshold):
+        """Analyze the images in self.images_path by selecting the green channel and applying a pixel_threshold 
+        in order to distinguish between cloud pixels and non-cloud pixels.
+        It then calculates the percentage of cloud pixels for each image in order to decide whether to discard or 
+        copy the image into self.out_dir.
+
+        Args:
+            pixel_threshold: The threshold to apply to each pixel of each image.
+            percentage_threshold: The maximum percentage of clouds to keep an image.
+
+        """
         for path in self.images_path.iterdir():
             nir_image = cv2.imread(str(path), cv2.IMREAD_COLOR)
             nir_channel = nir_image[:, :, 1]  # Select the green challenge of each pixel
@@ -126,8 +198,18 @@ class ThresholdClassifier(BaseClassifier):
 
 
 class NDVIClassifier(BaseClassifier):
+    """A classifier to remove images taken over water that makes use of the ndvi in order to distinguish water pixels"""
 
     def start(self, ndvi_range, percentage_threshold):
+        """Analyze the images in self.images_path by calculating the ndvi over each image and 
+        classifying water pixels using the ndvi range provided. Then it calculates the percentage of water pixels for each image 
+        to decide whether to discard it or copy it in self.out_dir.
+
+        Args:
+            ndvi_range: The ndvi range to distinguish water pixels.
+            percentage_threshold: The maximum percentage of water to keep an image.
+
+        """
         for path in self.images_path.iterdir():
             image = cv2.imread(str(path), cv2.IMREAD_COLOR)
             image_pixels = np.array(image, dtype=float) / float(255)

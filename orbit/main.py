@@ -8,6 +8,7 @@ from pathlib import Path
 from utils.ndvi import mean_ndvi
 from utils.vci import vci_calculate, vci_classify
 
+
 # --------------------------------------
 # VARIABLES
 # --------------------------------------
@@ -46,9 +47,10 @@ def main(argc, argv):
     filtered_images = {str(image_path): cv2.imread(str(image_path)) for image_path in path.iterdir()}
     logger.info(f"{len(filtered_images)}, images loaded")
 
-    latest_ndvi = {image_path: mean_ndvi(image) for image_path, image in filtered_images.items()}
+    # Calculate average NDVI not including cloud pixels which have negative NDVI values
+    latest_ndvi = {image_path: mean_ndvi(image, remove_negatives=True) for image_path, image in filtered_images.items()}
+    
     logger.info("Average NDVI values calculated for each image")
-
     
     ndvi_2019 = load_json_data("./data/2019_ndvi.json")
     ndvi_2020 = load_json_data("./data/2020_ndvi.json")
@@ -73,7 +75,7 @@ def main(argc, argv):
     vci_by_roi = {roi: vci_calculate(latest_ndvi[roi], min, max) for roi, (min, max) in min_max_ndvi_by_roi.items()}
     vci_classes_by_roi = {roi: vci_classify(vci) for roi, vci in vci_by_roi.items()}
 
-    print(vci_classes_by_roi)
+    logger.info("Completed")
 
 if __name__ == "__main__":
     main(len(sys.argv), sys.argv)

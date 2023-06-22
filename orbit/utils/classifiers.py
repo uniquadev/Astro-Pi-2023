@@ -67,6 +67,22 @@ def load_images(folder: str):
     return images_path
 
 
+def otsu_cloud_mask(path):
+    image = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+    _, thresholded = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    cloud_mask = thresholded != 0
+    return cloud_mask
+
+def threshold_cloud_mask(path, pixel_threshold):
+    nir_image = cv2.imread(str(path), cv2.IMREAD_COLOR)
+    nir_channel = nir_image[:, :, 1]  # Select the green challenge of each pixel
+
+    _, mask = cv2.threshold(nir_channel, int(pixel_threshold * 255), 255, cv2.THRESH_BINARY)
+    boolean_mask = mask == 0
+    
+    return boolean_mask
+
+
 # --------------------------------------
 # CLASSIFIERS
 # --------------------------------------
@@ -91,6 +107,8 @@ class BaseClassifier:
 
     def start(self):
         pass
+
+
 
 
 """ A water classifier to use with a google earth engine script

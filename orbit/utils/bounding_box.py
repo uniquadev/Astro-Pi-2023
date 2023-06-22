@@ -6,9 +6,9 @@ from datetime import datetime
 from pathlib import Path
 from math import radians, degrees
 
-from gsd import gsd
-from iss import iss_altitude
-from metadata import get_image_metadata, get_coordinates
+from .gsd import gsd
+from .iss import iss_altitude
+from .metadata import get_image_metadata, get_coordinates
 
 
 SENSOR_WIDTH = 6.2928  # mm

@@ -3,4 +3,6 @@ exif
 skyfield
 orbit
 opencv-python
+matplotlib
+seaborn
 # picamera # only for raspberry pi

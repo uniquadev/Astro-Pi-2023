@@ -23,7 +23,7 @@ logfile(base_folder / "main.log", backupCount=0, maxBytes=30e6)
 def load_json_data(path: str):
     with open(path, "r") as f:
         data = json.loads(f.read())["features"]
-        result = {feature["properties"]["name"][3:]: feature["properties"]["mean_ndvi"] for feature in data}
+        result = {feature["properties"]["path"][3:]: feature["properties"]["mean_ndvi"] for feature in data}
 
         return result
 
@@ -52,10 +52,10 @@ def main(argc, argv):
     
     logger.info("Average NDVI values calculated for each image")
     
-    ndvi_2019 = load_json_data("./data/2019_ndvi.json")
-    ndvi_2020 = load_json_data("./data/2020_ndvi.json")
-    ndvi_2021 = load_json_data("./data/2021_ndvi.json")
-    ndvi_2022 = load_json_data("./data/2022_ndvi.json")
+    ndvi_2019 = load_json_data("./past_ndvi_data/2019_ndvi.json")
+    ndvi_2020 = load_json_data("./past_ndvi_data/2020_ndvi.json")
+    ndvi_2021 = load_json_data("./past_ndvi_data/2021_ndvi.json")
+    ndvi_2022 = load_json_data("./past_ndvi_data/2022_ndvi.json")
 
     historic_ndvi = [ndvi_2019, ndvi_2020, ndvi_2021, ndvi_2022]
 
@@ -75,11 +75,17 @@ def main(argc, argv):
     vci_by_roi = {roi: vci_calculate(latest_ndvi[roi], min, max) for roi, (min, max) in min_max_ndvi_by_roi.items()}
     vci_classes_by_roi = {roi: vci_classify(vci) for roi, vci in vci_by_roi.items()}
 
-    print(latest_ndvi)
-    print()
-    print(vci_classes_by_roi)
-    print()
-    print(ndvi_by_roi)
+    # Save results
+    with open("main_results.txt", "w+") as f:
+        f.write("LATEST NDVI\n")
+        f.write(str(latest_ndvi)+"\n")
+        f.write("NDVI BY ROI OVER YEARS (2019-2023)\n")
+        f.write(str(ndvi_by_roi)+"\n")
+        f.write("VCI BY ROI\n")
+        f.write(str(vci_by_roi)+"\n")
+        f.write("VCI CLASSES BY ROI\n")
+        f.write(str(vci_classes_by_roi))
+
     logger.info("Completed")
 
 if __name__ == "__main__":

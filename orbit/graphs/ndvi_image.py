@@ -1,8 +1,13 @@
 import cv2
 import numpy as np
-from utils.fastiecm import fastiecm
+from fastiecm import fastiecm
+from pathlib import Path
 
-original = cv2.imread('../filtered/ndvi_out/img_0005.jpg')
+IMAGES = Path(__file__).parent.parent.parent / 'images'
+IMG = IMAGES / 'ndvi_out/img_0005.jpg'
+OUTPUT = IMAGES / 'out/fastiecm_img05.jpg'
+
+original = cv2.imread(str(IMG))
 
 def contrast_stretch(im):
     in_min = np.percentile(im, 5)
@@ -39,10 +44,11 @@ display(original, 'Original')
 contrasted = contrast_stretch(original)
 display(contrasted, 'Contrasted original')
 ndvi = calc_ndvi(contrasted)
-display(ndvi, 'NDVI')
+# display(ndvi, 'NDVI')
 ndvi_contrasted = contrast_stretch(ndvi)
 display(ndvi_contrasted, 'NDVI Contrasted')
 color_mapped_prep = ndvi_contrasted.astype(np.uint8)
 color_mapped_image = cv2.applyColorMap(color_mapped_prep, fastiecm)
 display(color_mapped_image, 'fastiecm_img9.jpg')
-cv2.imwrite('fastiecm_img9.jpg', color_mapped_image)
+res = cv2.imwrite(str(OUTPUT), color_mapped_image)
+print(res)

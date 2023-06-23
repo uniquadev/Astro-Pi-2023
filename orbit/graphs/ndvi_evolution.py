@@ -6,6 +6,7 @@ import numpy as np
 sns.set_style("whitegrid")
 sns.set_palette("colorblind")
 
+# DATA HERE
 years = [str(year) + "/04" for year in range(2019, 2024)]
 ndvi_values = [0.24, 0.25, 0.26, 0.07, 0.39]
 

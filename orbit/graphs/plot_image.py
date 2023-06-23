@@ -4,16 +4,18 @@ import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
 import matplotlib.cm as cm
 from fastiecm import fastiecm
+from pathlib import Path
 
+IMAGES = Path(__file__).parent.parent.parent / 'images'
+INPUT = IMAGES / 'out/fastiecm_img05.jpg'
 colormap = ListedColormap(fastiecm / 255)
 
 # Open the image
-image_path = './images/fastiecm_img5.jpg'  # Replace with the actual path to your image
+image_path = str(INPUT)  # Replace with the actual path to your image
 image = Image.open(image_path)
 
 # Rotate the image by 45 degrees
 rotated_image = image.rotate(-10, expand=True)
-
 
 # Create a figure and axes with custom figsize
 fig, ax = plt.subplots(figsize=(9, 8))

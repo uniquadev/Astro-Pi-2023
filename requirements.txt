@@ -5,4 +5,5 @@ orbit
 opencv-python
 matplotlib
 seaborn
+plotly==5.15.0
 # picamera # only for raspberry pi

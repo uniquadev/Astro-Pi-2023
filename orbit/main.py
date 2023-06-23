@@ -75,6 +75,11 @@ def main(argc, argv):
     vci_by_roi = {roi: vci_calculate(latest_ndvi[roi], min, max) for roi, (min, max) in min_max_ndvi_by_roi.items()}
     vci_classes_by_roi = {roi: vci_classify(vci) for roi, vci in vci_by_roi.items()}
 
+    print(latest_ndvi)
+    print()
+    print(vci_classes_by_roi)
+    print()
+    print(ndvi_by_roi)
     logger.info("Completed")
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ sns.set_palette("colorblind")
 
 # DATA HERE
 years = [str(year) + "/04" for year in range(2019, 2024)]
-ndvi_values = [0.24, 0.25, 0.26, 0.07, 0.39]
+ndvi_values = [0.2904903973013246, 0.006993930524487433, 0.05946905302361119, -0.011637350923399332, 0.049035084591179764]
 
 # Calculate the mean value
 mean_ndvi = np.mean(ndvi_values)

@@ -6,9 +6,10 @@ from datetime import datetime
 from pathlib import Path
 from math import radians, degrees
 
-from .gsd import gsd
-from .iss import iss_altitude
-from .metadata import get_image_metadata, get_coordinates
+from gsd import gsd
+from better_gsd import better_gsd
+from iss import iss_altitude
+from metadata import get_image_metadata, get_coordinates
 
 
 SENSOR_WIDTH = 6.2928  # mm
@@ -16,7 +17,8 @@ SENSOR_HEIGHT = 4.712  # mm
 FOCAL_LENGTH = 4.735  # mm
 IMAGE_WIDTH = 4056  # pixels
 IMAGE_HEIGHT = 3040  # pixels
-
+HORIZONTAL_AOV = 72.64  # degrees
+VERTICAL_AOV = 57.12  # degrees
 
 def adjust_latitude_longitude(latitude, longitude):
     adjusted_latitude = latitude if latitude <= 90 else latitude - 180
@@ -87,7 +89,7 @@ class BoundingBoxMaker:
             date = datetime.strptime(str(metadata["DateTimeOriginal"]), "%Y:%m:%d %H:%M:%S")
             timestamp = datetime.timestamp(date)
             flight_height = iss_altitude(timestamp)
-            distance_width, distance_height = gsd(sensor_width, sensor_height, focal_length, flight_height)
+            distance_width, distance_height = better_gsd(HORIZONTAL_AOV, VERTICAL_AOV, flight_height)
             latitude, longitude = get_coordinates(metadata)
             top_left, top_right, bottom_left, bottom_right = bounding_box(latitude, longitude, distance_width, distance_height)
 

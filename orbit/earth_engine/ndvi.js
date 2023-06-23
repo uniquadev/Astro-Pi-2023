@@ -1,5 +1,5 @@
 // Read the CSV file
-var roiTable = ee.FeatureCollection("REPLACE WITH YOUR TABLE")
+var roiTable = ee.FeatureCollection("projects/ee-diegoromeo025/assets/bounding_boxes")
 
 // Define a function to calculate NDVI for a single ROI
 var calculateMeanNdvi = function(feature) {
@@ -14,7 +14,7 @@ var calculateMeanNdvi = function(feature) {
   var roi = ee.Geometry.Rectangle([xmin, ymin, xmax, ymax]);
 
   // Define the month of interest
-  var year = 2017;  // Replace with your desired year
+  var year = 2021;  // Replace with your desired year
   var month = 4;    // Replace with your desired month
 
   // Filter the Sentinel-2 Level-2A collection by month and region
@@ -38,7 +38,7 @@ var calculateMeanNdvi = function(feature) {
   }).get('NDVI');
 
   // Create a new feature with the mean NDVI value and ROI name
-  var featureWithNdvi = ee.Feature(roi, { 'name': roiName, 'mean_ndvi': meanNdviValue });
+  var featureWithNdvi = ee.Feature(roi, { 'path': roiName, 'mean_ndvi': meanNdviValue });
 
   return featureWithNdvi;
 };
